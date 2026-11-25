@@ -7,6 +7,10 @@ import cors from "cors";
 import mongoose from "mongoose";
 
 import connectDB from "./config/db.js";
+import { notFoundHandler, errorHandler } from "./middlewares/errorMiddleware.js";
+import { apiLimiter } from "./middlewares/rateLimitMiddleware.js";
+import authRoutes from "./routes/authRoutes.js";
+
 const app = express();
 
 app.use(helmet());
@@ -16,10 +20,12 @@ app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
   })
 );
+
+app.use("/api", apiLimiter);
 
 app.get("/api/health", (_req, res) => {
   const dbState = mongoose.connection.readyState;
@@ -35,17 +41,16 @@ app.get("/api/health", (_req, res) => {
   res.status(status).json({
     success: dbState === 1,
     message: dbState === 1 ? "RentSphere API is running" : "Database unavailable",
+    environment: process.env.NODE_ENV || "development",
     database: dbStatus,
     timestamp: new Date().toISOString(),
   });
 });
 
-app.use((_req, res) => {
-  res.status(404).json({
-    success: false,
-    message: "Route not found",
-  });
-});
+app.use("/api/auth", authRoutes);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
@@ -56,9 +61,11 @@ const start = async () => {
   });
 };
 
-start().catch((err) => {
-  console.error("💥  Failed to start server:", err.message);
-  process.exit(1);
-});
+if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
+  start().catch((err) => {
+    console.error("💥  Failed to start server:", err.message);
+    process.exit(1);
+  });
+}
 
 export default app;
