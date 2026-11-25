@@ -10,6 +10,10 @@ import connectDB from "./config/db.js";
 import { notFoundHandler, errorHandler } from "./middlewares/errorMiddleware.js";
 import { apiLimiter } from "./middlewares/rateLimitMiddleware.js";
 import authRoutes from "./routes/authRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import customerRoutes from "./routes/customerRoutes.js";
 
 const app = express();
 
@@ -48,6 +52,10 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/customers", customerRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
