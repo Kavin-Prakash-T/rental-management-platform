@@ -14,6 +14,8 @@ import settingsRoutes from "./routes/settingsRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import customerRoutes from "./routes/customerRoutes.js";
+import inventoryRoutes from "./routes/inventoryRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
 
 const app = express();
 
@@ -56,6 +58,8 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/customers", customerRoutes);
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
