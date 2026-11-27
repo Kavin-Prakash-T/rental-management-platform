@@ -108,6 +108,40 @@ export const cancelBookingSchema = z.object({
   cancellationReason: z.string().trim().max(500).optional(),
 });
 
+export const issueBookingSchema = z.object({
+  actualStartDate: z
+    .string()
+    .datetime({ offset: true })
+    .or(z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" }))
+    .optional(),
+  notes: z.string().trim().max(1000).optional(),
+});
+
+const returnItemInputSchema = z.object({
+  product: objectIdSchema,
+  quantity: z
+    .number({ message: "Quantity must be a number" })
+    .int("Quantity must be an integer")
+    .positive("Quantity must be greater than zero"),
+  condition: z.enum(["good", "fair", "damaged", "poor"]).default("good").optional(),
+  notes: z.string().trim().max(500).optional(),
+});
+
+export const returnBookingSchema = z.object({
+  returnDate: z
+    .string()
+    .datetime({ offset: true })
+    .or(z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format" }))
+    .optional(),
+  items: z.array(returnItemInputSchema).min(1, "At least one returning item is required"),
+  notes: z.string().trim().max(1000).optional(),
+});
+
+export const bookingCalendarQuerySchema = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
 export const getBookingsQuerySchema = z.object({
   customer: objectIdSchema.optional(),
   status: z.enum(["draft", "confirmed", "issued", "completed", "cancelled"]).optional(),

@@ -14,6 +14,17 @@ const maintenanceSchema = new mongoose.Schema(
       min: 1,
       default: 1,
     },
+    maintenanceType: {
+      type: String,
+      enum: ["scheduled", "corrective"],
+      default: "scheduled",
+      index: true,
+    },
+    issueDescription: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     reason: {
       type: String,
       trim: true,
@@ -34,6 +45,16 @@ const maintenanceSchema = new mongoose.Schema(
       type: Date,
       required: true,
       index: true,
+    },
+    scheduledStartDate: {
+      type: Date,
+    },
+    scheduledEndDate: {
+      type: Date,
+    },
+    actualCompletionDate: {
+      type: Date,
+      default: null,
     },
     actualReturnDate: {
       type: Date,
@@ -61,6 +82,27 @@ const maintenanceSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+
+maintenanceSchema.pre("save", function () {
+  if (this.startDate && !this.scheduledStartDate) {
+    this.scheduledStartDate = this.startDate;
+  }
+  if (this.endDate && !this.scheduledEndDate) {
+    this.scheduledEndDate = this.endDate;
+  }
+  if (this.actualCompletionDate && !this.actualReturnDate) {
+    this.actualReturnDate = this.actualCompletionDate;
+  }
+  if (this.actualReturnDate && !this.actualCompletionDate) {
+    this.actualCompletionDate = this.actualReturnDate;
+  }
+  if (!this.issueDescription && this.reason) {
+    this.issueDescription = this.reason;
+  }
+  if (!this.reason && this.issueDescription) {
+    this.reason = this.issueDescription;
+  }
+});
 
 maintenanceSchema.index({ product: 1, status: 1, startDate: 1, endDate: 1 });
 maintenanceSchema.index({ status: 1, startDate: 1, endDate: 1 });

@@ -3,7 +3,11 @@ import * as inventoryController from "../controllers/inventoryController.js";
 import { authenticate } from "../middlewares/authMiddleware.js";
 import csrfProtection from "../middlewares/csrfMiddleware.js";
 import validate from "../middlewares/validateMiddleware.js";
-import { checkAvailabilitySchema } from "../validators/inventoryValidator.js";
+import {
+  checkAvailabilitySchema,
+  productIdParamSchema,
+  getInventoryQuerySchema,
+} from "../validators/inventoryValidator.js";
 
 const router = Router();
 
@@ -13,6 +17,26 @@ router.post(
   csrfProtection,
   validate({ body: checkAvailabilitySchema }),
   inventoryController.checkAvailability
+);
+
+router.get(
+  "/",
+  authenticate,
+  validate({ query: getInventoryQuerySchema }),
+  inventoryController.getInventoryOverview
+);
+
+router.get(
+  "/overdue",
+  authenticate,
+  inventoryController.getOverdueRentals
+);
+
+router.get(
+  "/:productId",
+  authenticate,
+  validate({ params: productIdParamSchema }),
+  inventoryController.getProductInventoryDetail
 );
 
 export default router;

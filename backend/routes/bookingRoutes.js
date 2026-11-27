@@ -8,6 +8,9 @@ import {
   updateBookingSchema,
   bookingIdParamSchema,
   cancelBookingSchema,
+  issueBookingSchema,
+  returnBookingSchema,
+  bookingCalendarQuerySchema,
   getBookingsQuerySchema,
 } from "../validators/bookingValidator.js";
 
@@ -26,6 +29,13 @@ router.get(
   authenticate,
   validate({ query: getBookingsQuerySchema }),
   bookingController.getBookings
+);
+
+router.get(
+  "/calendar",
+  authenticate,
+  validate({ query: bookingCalendarQuerySchema }),
+  bookingController.getBookingCalendar
 );
 
 router.get(
@@ -57,6 +67,22 @@ router.post(
   csrfProtection,
   validate({ params: bookingIdParamSchema, body: cancelBookingSchema }),
   bookingController.cancelBooking
+);
+
+router.post(
+  "/:id/issue",
+  authenticate,
+  csrfProtection,
+  validate({ params: bookingIdParamSchema, body: issueBookingSchema }),
+  bookingController.issueBooking
+);
+
+router.post(
+  "/:id/return",
+  authenticate,
+  csrfProtection,
+  validate({ params: bookingIdParamSchema, body: returnBookingSchema }),
+  bookingController.returnBooking
 );
 
 export default router;

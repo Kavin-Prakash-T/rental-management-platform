@@ -3,6 +3,7 @@ import Booking from "../models/Booking.js";
 import Product from "../models/Product.js";
 import Customer from "../models/Customer.js";
 import Settings from "../models/Settings.js";
+import Maintenance from "../models/Maintenance.js";
 import ApiError from "../utils/ApiError.js";
 import {
   calculateProductAvailability,
@@ -573,4 +574,192 @@ export const updateBooking = async (id, updateData) => {
 
   await currentBooking.save();
   return currentBooking;
+};
+
+export const issueBooking = async (id, issueData = {}) => {
+  return await withInventoryTransaction(async (session) => {
+    const booking = await Booking.findById(id).session(session);
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    if (booking.status !== "confirmed") {
+      throw ApiError.badRequest(
+        `Cannot issue booking in '${booking.status}' status. Only confirmed bookings can be issued.`
+      );
+    }
+
+    const issueDate = issueData.actualStartDate ? new Date(issueData.actualStartDate) : new Date();
+    booking.actualStartDate = issueDate;
+    booking.status = "issued";
+    if (issueData.notes) {
+      booking.notes = booking.notes ? `${booking.notes}; ${issueData.notes}` : issueData.notes;
+    }
+
+    for (const it of booking.items) {
+      it.issuedQuantity = it.quantity;
+      it.returnedQuantity = 0;
+      it.damagedQuantity = 0;
+
+      const product = await Product.findOneAndUpdate(
+        { _id: it.product },
+        { $inc: { __v: 1 } },
+        { session, new: true }
+      );
+
+      if (product) {
+        product.reservedQuantity = Math.max(0, (product.reservedQuantity || 0) - it.quantity);
+        product.issuedQuantity = (product.issuedQuantity || 0) + it.quantity;
+        product.recalculateAvailability();
+        await product.save({ session });
+      }
+    }
+
+    await booking.save({ session });
+    return booking;
+  });
+};
+
+export const returnBooking = async (id, returnData = {}) => {
+  return await withInventoryTransaction(async (session) => {
+    const booking = await Booking.findById(id).session(session);
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    if (booking.status !== "issued") {
+      throw ApiError.badRequest(
+        `Cannot process returns for booking in '${booking.status}' status. Only issued bookings can receive returns.`
+      );
+    }
+
+    const returnDate = returnData.returnDate ? new Date(returnData.returnDate) : new Date();
+    const returnItems = returnData.items || [];
+
+    if (!Array.isArray(returnItems) || returnItems.length === 0) {
+      throw ApiError.badRequest("At least one returning item must be specified");
+    }
+
+    for (const retItem of returnItems) {
+      const bookingItem = booking.items.find(
+        (i) => i.product.toString() === retItem.product.toString()
+      );
+
+      if (!bookingItem) {
+        throw ApiError.badRequest(`Product '${retItem.product}' is not part of this booking`);
+      }
+
+      const currentReturned = bookingItem.returnedQuantity || 0;
+      const totalIssued = bookingItem.issuedQuantity || bookingItem.quantity;
+      const qty = Number(retItem.quantity);
+
+      if (qty <= 0) {
+        throw ApiError.badRequest("Return quantity must be greater than zero");
+      }
+
+      if (currentReturned + qty > totalIssued) {
+        throw ApiError.badRequest(
+          `Cannot return ${qty} units of '${bookingItem.name}'. Only ${totalIssued - currentReturned} units remaining to return.`
+        );
+      }
+
+      bookingItem.returnedQuantity = currentReturned + qty;
+
+      const product = await Product.findOneAndUpdate(
+        { _id: retItem.product },
+        { $inc: { __v: 1 } },
+        { session, new: true }
+      );
+
+      if (!product) {
+        throw ApiError.notFound(`Product '${retItem.product}' not found`);
+      }
+
+      const isDamaged = retItem.condition === "damaged" || retItem.condition === "poor";
+
+      if (isDamaged) {
+        bookingItem.damagedQuantity = (bookingItem.damagedQuantity || 0) + qty;
+        product.issuedQuantity = Math.max(0, (product.issuedQuantity || 0) - qty);
+        product.maintenanceQuantity = (product.maintenanceQuantity || 0) + qty;
+        product.recalculateAvailability();
+        await product.save({ session });
+
+        await Maintenance.create(
+          [
+            {
+              product: product._id,
+              quantity: qty,
+              reason: `Returned in ${retItem.condition} condition from booking ${booking.bookingNumber}`,
+              status: "in_progress",
+              startDate: returnDate,
+              endDate: new Date(returnDate.getTime() + 7 * 24 * 60 * 60 * 1000),
+              notes: retItem.notes || "",
+            },
+          ],
+          { session }
+        );
+      } else {
+        product.issuedQuantity = Math.max(0, (product.issuedQuantity || 0) - qty);
+        product.recalculateAvailability();
+        await product.save({ session });
+      }
+    }
+
+    booking.returnLogs.push({
+      returnDate,
+      items: returnItems,
+      notes: returnData.notes || "",
+    });
+
+    const isCompletelyReturned = booking.items.every(
+      (i) => (i.returnedQuantity || 0) >= (i.issuedQuantity || i.quantity)
+    );
+
+    if (isCompletelyReturned) {
+      booking.status = "completed";
+      booking.actualReturnDate = returnDate;
+    }
+
+    await booking.save({ session });
+    return booking;
+  });
+};
+
+export const getBookingCalendar = async (queryParams = {}) => {
+  const query = { status: { $ne: "cancelled" } };
+
+  if (queryParams.startDate && queryParams.endDate) {
+    query.startDate = { $lt: new Date(queryParams.endDate) };
+    query.endDate = { $gt: new Date(queryParams.startDate) };
+  } else if (queryParams.startDate) {
+    query.endDate = { $gte: new Date(queryParams.startDate) };
+  } else if (queryParams.endDate) {
+    query.startDate = { $lte: new Date(queryParams.endDate) };
+  }
+
+  const bookings = await Booking.find(query)
+    .populate("customer", "name phone email")
+    .populate("items.product", "name sku")
+    .sort({ startDate: 1 });
+
+  return bookings.map((b) => ({
+    _id: b._id,
+    bookingNumber: b.bookingNumber,
+    customer: b.customer,
+    startDate: b.startDate,
+    endDate: b.endDate,
+    status: b.status,
+    rentalType: b.rentalType,
+    duration: b.duration,
+    totalAmount: b.totalAmount,
+    items: b.items.map((i) => ({
+      product: i.product,
+      name: i.name,
+      sku: i.sku,
+      quantity: i.quantity,
+      issuedQuantity: i.issuedQuantity,
+      returnedQuantity: i.returnedQuantity,
+      damagedQuantity: i.damagedQuantity,
+    })),
+  }));
 };

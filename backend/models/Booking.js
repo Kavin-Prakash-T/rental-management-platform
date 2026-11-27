@@ -22,6 +22,21 @@ const bookingItemSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
+    issuedQuantity: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    returnedQuantity: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    damagedQuantity: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
     rateSnapshot: {
       dailyRate: { type: Number, min: 0, default: 0 },
       hourlyRate: { type: Number, min: 0, default: 0 },
@@ -39,6 +54,48 @@ const bookingItemSchema = new mongoose.Schema(
     },
   },
   { _id: true }
+);
+
+const returnLogItemSchema = new mongoose.Schema(
+  {
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    condition: {
+      type: String,
+      enum: ["good", "fair", "damaged", "poor"],
+      default: "good",
+    },
+    notes: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+  },
+  { _id: false }
+);
+
+const returnLogSchema = new mongoose.Schema(
+  {
+    returnDate: {
+      type: Date,
+      default: Date.now,
+    },
+    items: [returnLogItemSchema],
+    notes: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+  },
+  { _id: true, timestamps: true }
 );
 
 const bookingSchema = new mongoose.Schema(
@@ -146,6 +203,7 @@ const bookingSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    returnLogs: [returnLogSchema],
     notes: {
       type: String,
       trim: true,

@@ -2,7 +2,11 @@ import { z } from "zod";
 import mongoose from "mongoose";
 
 const objectIdSchema = z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
-  message: "Invalid product identifier format",
+  message: "Invalid identifier format",
+});
+
+export const productIdParamSchema = z.object({
+  productId: objectIdSchema,
 });
 
 const availabilityItemSchema = z.object({
@@ -36,3 +40,18 @@ export const checkAvailabilitySchema = z
       path: ["endDate"],
     }
   );
+
+export const getInventoryQuerySchema = z.object({
+  category: objectIdSchema.optional(),
+  search: z.string().trim().optional(),
+  page: z
+    .string()
+    .transform((val) => Math.max(1, parseInt(val, 10) || 1))
+    .optional(),
+  limit: z
+    .string()
+    .transform((val) => Math.min(100, Math.max(1, parseInt(val, 10) || 10)))
+    .optional(),
+  sortBy: z.string().trim().optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
+});

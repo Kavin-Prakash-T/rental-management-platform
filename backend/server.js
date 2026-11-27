@@ -16,6 +16,7 @@ import productRoutes from "./routes/productRoutes.js";
 import customerRoutes from "./routes/customerRoutes.js";
 import inventoryRoutes from "./routes/inventoryRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
+import maintenanceRoutes from "./routes/maintenanceRoutes.js";
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/maintenance", maintenanceRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -14,6 +14,11 @@ export const getBookings = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, result, "Bookings retrieved successfully");
 });
 
+export const getBookingCalendar = asyncHandler(async (req, res) => {
+  const result = await bookingService.getBookingCalendar(req.query);
+  return ApiResponse.success(res, result, "Booking calendar retrieved successfully");
+});
+
 export const getBookingById = asyncHandler(async (req, res) => {
   const booking = await bookingService.getBookingById(req.params.id);
   return ApiResponse.success(res, booking, "Booking retrieved successfully");
@@ -33,4 +38,14 @@ export const cancelBooking = asyncHandler(async (req, res) => {
   const { cancellationReason } = req.body || {};
   const booking = await bookingService.cancelBooking(req.params.id, cancellationReason);
   return ApiResponse.success(res, booking, "Booking cancelled and equipment reservations released successfully");
+});
+
+export const issueBooking = asyncHandler(async (req, res) => {
+  const booking = await bookingService.issueBooking(req.params.id, req.body);
+  return ApiResponse.success(res, booking, "Equipment issued successfully");
+});
+
+export const returnBooking = asyncHandler(async (req, res) => {
+  const booking = await bookingService.returnBooking(req.params.id, req.body);
+  return ApiResponse.success(res, booking, "Equipment return recorded successfully");
 });
