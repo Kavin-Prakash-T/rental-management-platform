@@ -25,6 +25,8 @@ import dashboardRoutes from "./routes/dashboardRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import faqRoutes from "./routes/faqRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
+import adminAiRoutes from "./routes/adminAiRoutes.js";
 
 const app = express();
 
@@ -78,6 +80,8 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/faqs", faqRoutes);
 app.use("/api/public", publicRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/admin/ai", adminAiRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
