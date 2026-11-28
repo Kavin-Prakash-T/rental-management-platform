@@ -1,4 +1,5 @@
 import * as bookingService from "../services/bookingService.js";
+import * as emailService from "../services/emailService.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
@@ -31,6 +32,7 @@ export const updateBooking = asyncHandler(async (req, res) => {
 
 export const confirmBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.confirmBooking(req.params.id);
+  await emailService.sendBookingConfirmation(booking);
   return ApiResponse.success(res, booking, "Booking confirmed and equipment reserved successfully");
 });
 
@@ -42,10 +44,14 @@ export const cancelBooking = asyncHandler(async (req, res) => {
 
 export const issueBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.issueBooking(req.params.id, req.body);
+  await emailService.sendEquipmentIssuedNotification(booking);
   return ApiResponse.success(res, booking, "Equipment issued successfully");
 });
 
 export const returnBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.returnBooking(req.params.id, req.body);
+  if (booking.status === "completed") {
+    await emailService.sendRentalCompletedNotification(booking);
+  }
   return ApiResponse.success(res, booking, "Equipment return recorded successfully");
 });

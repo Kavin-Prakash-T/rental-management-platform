@@ -27,6 +27,8 @@ import faqRoutes from "./routes/faqRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import adminAiRoutes from "./routes/adminAiRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import cronRoutes from "./routes/cronRoutes.js";
 
 const app = express();
 
@@ -82,6 +84,8 @@ app.use("/api/faqs", faqRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin/ai", adminAiRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/cron", cronRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -1,9 +1,11 @@
 import * as invoiceService from "../services/invoiceService.js";
+import * as emailService from "../services/emailService.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 export const generateInvoice = asyncHandler(async (req, res) => {
   const invoice = await invoiceService.generateInvoiceFromBooking(req.params.bookingId, req.body);
+  await emailService.sendInvoiceEmail(invoice);
   return ApiResponse.created(res, invoice, "Invoice generated successfully");
 });
 
